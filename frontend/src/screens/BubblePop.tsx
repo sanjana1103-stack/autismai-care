@@ -39,7 +39,7 @@ export default function BubblePop({ navigation, route }: any){
       duration
     };
     await saveSession(session);
-    navigation.replace('ActivityComplete', { stars: 3, coins: 5 });
+    navigation.replace('ActivityComplete', { activitySessionId: session.activitySessionId, stars: 3, coins: 5 });
   }
 
   function onExit(){
@@ -52,7 +52,7 @@ export default function BubblePop({ navigation, route }: any){
       <View style={{height:20}} />
       <Text style={styles.counter}>{pops} / {goal} {t('app.pops','en')}</Text>
       <View style={{height:20}} />
-      <TouchableOpacity style={styles.bubble} onPress={()=>{ if(pops===0) onStart(); onPop(); }}>
+      <TouchableOpacity style={styles.bubble} onPress={()=>{ if(pops===0) onStart(); onPop(); }} accessibilityLabel="bubble-button">
         <Text style={{fontSize:32}}>🔵</Text>
       </TouchableOpacity>
       <View style={{height:20}} />
@@ -61,4 +61,4 @@ export default function BubblePop({ navigation, route }: any){
   )
 }
 
-const styles = StyleSheet.create({ container:{flex:1,alignItems:'center',padding:16}, title:{fontSize:20,fontWeight:'700'}, counter:{fontSize:18,marginTop:8}, bubble:{backgroundColor:'#fff',padding:24,borderRadius:100,alignItems:'center',justifyContent:'center',elevation:4}, exit:{marginTop:20}})
+const styles = StyleSheet.create({ container:{flex:1,alignItems:'center',padding:16,backgroundColor:'#F7FBFF'}, title:{fontSize:20,fontWeight:'700'}, counter:{fontSize:18,marginTop:8}, bubble:{backgroundColor:'#fff',padding:24,borderRadius:100,alignItems:'center',justifyContent:'center',elevation:4}, exit:{marginTop:20} })
