@@ -3,6 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const CHILD_KEY = 'AUTISMAI_CHILD';
 const SETTINGS_KEY = 'AUTISMAI_SETTINGS';
 const SESSIONS_KEY = 'AUTISMAI_SESSIONS';
+const STATS_KEY = 'AUTISMAI_STATS';
+const REWARDS_KEY = 'AUTISMAI_REWARDS';
 
 export async function saveChildProfile(profile: any){
   await AsyncStorage.setItem(CHILD_KEY, JSON.stringify(profile));
@@ -17,7 +19,7 @@ export async function saveSettings(settings: any){
 }
 export async function loadSettings(){
   const s = await AsyncStorage.getItem(SETTINGS_KEY);
-  return s ? JSON.parse(s) : { lang: 'en' };
+  return s ? JSON.parse(s) : { lang: 'en', sound: true, vibration: true, reducedMotion:false };
 }
 
 export async function saveSession(session: any){
@@ -32,5 +34,40 @@ export async function saveSession(session: any){
 
 export async function loadSessions(){
   const s = await AsyncStorage.getItem(SESSIONS_KEY);
+  return s ? JSON.parse(s) : [];
+}
+
+export async function loadStats(){
+  const s = await AsyncStorage.getItem(STATS_KEY);
+  return s ? JSON.parse(s) : { stars:0, coins:0, streak:0, lastCompletionDate: null };
+}
+
+export async function saveStats(stats:any){
+  await AsyncStorage.setItem(STATS_KEY, JSON.stringify(stats));
+}
+
+export async function awardRewards(activitySessionId:string, stars:number, coins:number){
+  // ensure single issuance
+  const rewardsS = await AsyncStorage.getItem(REWARDS_KEY);
+  const rewards = rewardsS ? JSON.parse(rewardsS) : [];
+  if(rewards.find((r:any)=>r.activitySessionId===activitySessionId)) return false;
+  rewards.push({ activitySessionId, stars, coins, date: new Date().toISOString() });
+  await AsyncStorage.setItem(REWARDS_KEY, JSON.stringify(rewards));
+  // increment stats
+  const stats = await loadStats();
+  stats.stars = (stats.stars||0) + stars;
+  stats.coins = (stats.coins||0) + coins;
+  const today = new Date().toISOString().slice(0,10);
+  if(stats.lastCompletionDate !== today){
+    // simple streak increment
+    stats.streak = (stats.streak||0) + 1;
+    stats.lastCompletionDate = today;
+  }
+  await saveStats(stats);
+  return true;
+}
+
+export async function loadRewards(){
+  const s = await AsyncStorage.getItem(REWARDS_KEY);
   return s ? JSON.parse(s) : [];
 }

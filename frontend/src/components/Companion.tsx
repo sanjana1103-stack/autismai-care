@@ -1,17 +1,13 @@
 import React from 'react';
-import { GestureResponderEvent } from 'react-native';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
-export default function Companion({ name = 'Panda', onPress }: { name?: string; onPress?: (e: GestureResponderEvent) => void }){
-  const emoji = name === 'Panda' ? '🐼' : name === 'Bunny' ? '🐰' : name === 'Cat' ? '🐱' : '⭐';
+export default function Companion({ name = 'Panda', size = 80 }: { name?: string; size?: number }){
+  const emoji = name === 'Panda' ? '🐼' : name === 'Elephant' ? '🐘' : name === 'Lion' ? '🦁' : name === 'Bunny' ? '🐰' : '🐻';
   return (
-    <TouchableOpacity onPress={onPress} style={styles.container} accessibilityLabel={`Companion ${name}`}>
-      <Text style={styles.emoji}>{emoji}</Text>
-    </TouchableOpacity>
+    <View style={[styles.container,{width:size,height:size,borderRadius:size/2}]}> 
+      <Text style={{fontSize: size*0.6}}>{emoji}</Text>
+    </View>
   )
 }
 
-const styles = StyleSheet.create({
-  container: { alignItems: 'center', justifyContent: 'center', padding: 8 },
-  emoji: { fontSize: 48 }
-})
+const styles = StyleSheet.create({ container:{alignItems:'center',justifyContent:'center',backgroundColor:'#fff',elevation:4} })

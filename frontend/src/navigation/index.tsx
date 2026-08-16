@@ -6,10 +6,7 @@ import LanguageSelect from '../screens/LanguageSelect';
 import RoleSelect from '../screens/RoleSelect';
 import Login from '../screens/Login';
 import ChildProfileSetup from '../screens/ChildProfileSetup';
-import ChildHome from '../screens/ChildHome';
-import ActivityList from '../screens/ActivityList';
-import BubblePop from '../screens/BubblePop';
-import Settings from '../screens/Settings';
+import HomeStack from './homeStack';
 
 const Stack = createNativeStackNavigator();
 
@@ -22,10 +19,7 @@ export default function RootNavigator(){
         <Stack.Screen name="RoleSelect" component={RoleSelect} />
         <Stack.Screen name="Login" component={Login} />
         <Stack.Screen name="ChildProfileSetup" component={ChildProfileSetup} />
-        <Stack.Screen name="ChildHome" component={ChildHome} />
-        <Stack.Screen name="ActivityList" component={ActivityList} />
-        <Stack.Screen name="BubblePop" component={BubblePop} />
-        <Stack.Screen name="Settings" component={Settings} />
+        <Stack.Screen name="Home" component={HomeStack} />
       </Stack.Navigator>
     </NavigationContainer>
   )
