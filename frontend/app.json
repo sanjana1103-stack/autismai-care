@@ -1,0 +1,8 @@
+{
+  "expo": {
+    "name": "AutismAI Care",
+    "slug": "autismai-care",
+    "platforms": ["android","ios"],
+    "version": "1.0.0"
+  }
+}
