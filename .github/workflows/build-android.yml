@@ -47,22 +47,7 @@ jobs:
         working-directory: frontend
         run: |
           set -euo pipefail
-
-          if [ ! -f eas.json ]; then
-            cat > eas.json <<'EOF'
-{
-  "build": {
-    "preview": {
-      "android": {
-        "buildType": "apk"
-      }
-    }
-  }
-}
-EOF
-          fi
-
-          cat eas.json
+          node -e "const fs=require('fs'); if(!fs.existsSync('eas.json')){ const cfg={build:{preview:{android:{buildType:'apk'}}}}; fs.writeFileSync('eas.json', JSON.stringify(cfg,null,2)); } console.log(fs.readFileSync('eas.json','utf8'));"
 
       - name: Install EAS CLI
         run: |
@@ -73,12 +58,10 @@ EOF
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
           set -euo pipefail
-
           if [ -z "${EXPO_TOKEN:-}" ]; then
             echo "ERROR: EXPO_TOKEN is missing."
             exit 1
           fi
-
           eas whoami
 
       - name: Run EAS build
@@ -87,19 +70,15 @@ EOF
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
           set -euo pipefail
-
           echo "Starting EAS Android APK build..."
-
           eas build \
             --platform android \
             --profile preview \
             --non-interactive \
             --wait \
             --json > /tmp/eas_build_output.json
-
           echo "EAS build completed."
-
-          node -e "const fs=require('fs'); const j=JSON.parse(fs.readFileSync('/tmp/eas_build_output.json','utf8')); const id=j.id || (j.result&&j.result.id) || (j.build&&j.build.id) || (j.builds&&j.builds[0]&&j.builds[0].id); if(!id){console.error('No EAS build ID found'); console.error(JSON.stringify(j,null,2)); process.exit(1);} console.log('EAS BUILD ID:',id); fs.writeFileSync('/tmp/eas_build_id',id);"
+          node -e "const fs=require('fs'); const raw=fs.readFileSync('/tmp/eas_build_output.json','utf8'); let j; try{ j=JSON.parse(raw); }catch(e){ console.error('EAS output not JSON'); console.error(raw); process.exit(1);} const id=j.id || (j.result && j.result.id) || (j.build && j.build.id) || (j.builds && j.builds[0] && j.builds[0].id); if(!id){ console.error('No EAS build ID found'); console.error(JSON.stringify(j,null,2)); process.exit(1);} console.log('EAS BUILD ID:', id); fs.writeFileSync('/tmp/eas_build_id', id);"
 
       - name: Download APK
         working-directory: frontend
@@ -107,24 +86,19 @@ EOF
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
           set -euo pipefail
-
-          BUILD_ID=$(cat /tmp/eas_build_id)
-
-          mkdir -p autismai-artifacts
-
-          # Download artifacts for the build (eas CLI will write files to current dir)
-          eas build:download \
-            --build-id "$BUILD_ID" \
-            --non-interactive
-
-          APK_PATH=$(find . -maxdepth 3 -type f -name '*.apk' | head -n 1 || true)
-
-          if [ -z "$APK_PATH" ]; then
-            echo "ERROR: No APK was downloaded."
-            find . -maxdepth 3 -type f -print
+          if [ ! -f /tmp/eas_build_id ]; then
+            echo "ERROR: /tmp/eas_build_id not found"
             exit 1
           fi
-
+          BUILD_ID=$(cat /tmp/eas_build_id)
+          mkdir -p autismai-artifacts
+          eas build:download --platform android --id "$BUILD_ID" --output ./autismai-artifacts
+          APK_PATH=$(find ./autismai-artifacts -type f -name '*.apk' | head -n 1 || true)
+          if [ -z "$APK_PATH" ]; then
+            echo "ERROR: No APK was downloaded."
+            ls -la autismai-artifacts || true
+            exit 1
+          fi
           cp "$APK_PATH" ./autismai.apk
 
       - name: Upload APK artifact
