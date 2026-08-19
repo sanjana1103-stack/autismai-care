@@ -16,10 +16,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node (no cache)
+      - name: Setup Node (explicit 22, no cache)
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+
+      - name: Use npm 9 (ensure stable npm behavior)
+        run: |
+          corepack enable && corepack prepare npm@9 --activate
 
       - name: Install dependencies (frontend)
         working-directory: frontend
@@ -62,8 +66,7 @@ EOF
             exit 1
           fi
           echo "EXPO_TOKEN is present"
-          # verify EAS CLI works and is authenticated
-          eas whoami || (echo "EAS whoami failed" >&2; exit 1)
+          eas whoami
 
       - name: Run EAS build (preview) and capture build id
         working-directory: frontend
