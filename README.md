@@ -1,7 +1,21 @@
-# AUTISMAI CARE
+Update README with run instructions and demo info.
 
-Learn. Play. Grow. Together.
+# AUTISMAI CARE — LUMI
 
-This repository contains the AUTISMAI CARE MVP: an Expo + React Native frontend and a FastAPI backend scaffold with MongoDB integration. The goal is a minimal but functional starting point implementing authentication, role-based routing, a child home experience, a matching activity, speech practice recording, and a backend API to store activity sessions.
+Demo-ready frontend (Expo) with local persistence for activities, rewards and profiles.
 
-See /frontend and /backend directories for details.
+Run the demo:
+
+1. Install dependencies
+   cd frontend
+   npm install
+2. Start Expo
+   npm start
+
+Demo credentials (local/demo):
+- Parent: parent@autismai.care
+- Child: Aarav
+
+This demo stores data locally using AsyncStorage. No backend required for demo flows.
+
+Safety disclaimer: This app is a supportive practice tool and does not diagnose or replace professional therapy.
