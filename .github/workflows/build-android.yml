@@ -1,50 +1,21 @@
-- name: Run EAS build
-  working-directory: frontend
-  env:
-    EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-  run: |
-    set -euo pipefail
+      - name: Run EAS build
+        working-directory: frontend
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          set -euo pipefail
 
-    echo "Starting EAS Android APK build..."
+          echo "Starting EAS Android APK build..."
 
-    eas build \
-      --platform android \
-      --profile preview \
-      --non-interactive \
-      --wait \
-      --json > /tmp/eas_build_output.json
+          eas build \
+            --platform android \
+            --profile preview \
+            --non-interactive \
+            --wait \
+            --json > /tmp/eas_build_output.json
 
-    echo "EAS build completed."
+          echo "EAS build completed."
 
-    node <<'NODE'
-    const fs = require('fs');
+          node -e "const fs=require('fs'); const j=JSON.parse(fs.readFileSync('/tmp/eas_build_output.json','utf8')); const id=j.id || (j.result&&j.result.id) || (j.build&&j.build.id) || (j.builds&&j.builds[0]&&j.builds[0].id); if(!id){console.error('No EAS build ID found'); console.error(JSON.stringify(j,null,2)); process.exit(1);} console.log('EAS BUILD ID:',id); fs.writeFileSync('/tmp/eas_build_id',id);"
 
-    const raw = fs.readFileSync('/tmp/eas_build_output.json', 'utf8');
-
-    let data;
-
-    try {
-      data = JSON.parse(raw);
-    } catch (e) {
-      console.error('Could not parse EAS JSON output:');
-      console.error(raw);
-      process.exit(1);
-    }
-
-    const builds = Array.isArray(data) ? data : [data];
-
-    const build =
-      builds.find(x => x && x.id) ||
-      (data.result && data.result.id ? data.result : null) ||
-      (data.build && data.build.id ? data.build : null);
-
-    if (!build || !build.id) {
-      console.error('Could not find EAS build ID.');
-      console.error(JSON.stringify(data, null, 2));
-      process.exit(1);
-    }
-
-    console.log('EAS BUILD ID:', build.id);
-
-    fs.writeFileSync('/tmp/eas_build_id', build.id);
-    NODE
+          echo "EAS build ID saved."
