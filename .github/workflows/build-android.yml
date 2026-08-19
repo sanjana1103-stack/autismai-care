@@ -1,3 +1,86 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - copilot/autismai-care-foundation
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Use npm 9
+        run: |
+          corepack enable
+          corepack prepare npm@9 --activate
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: |
+          set -euo pipefail
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Check Expo versions
+        working-directory: frontend
+        run: |
+          set -euo pipefail
+          npm ls expo expo-router --depth=0 || true
+          node -e "const p=require('./package.json'); if((p.dependencies && p.dependencies['expo-router']) !== '1.4.4'){ console.error('expo-router must remain 1.4.4'); process.exit(1); }"
+
+      - name: Ensure eas.json
+        working-directory: frontend
+        run: |
+          set -euo pipefail
+
+          if [ ! -f eas.json ]; then
+            cat > eas.json <<'EOF'
+{
+  "build": {
+    "preview": {
+      "android": {
+        "buildType": "apk"
+      }
+    }
+  }
+}
+EOF
+          fi
+
+          cat eas.json
+
+      - name: Install EAS CLI
+        run: |
+          npm install --global eas-cli@latest
+
+      - name: Verify Expo authentication
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${EXPO_TOKEN:-}" ]; then
+            echo "ERROR: EXPO_TOKEN is missing."
+            exit 1
+          fi
+
+          eas whoami
+
       - name: Run EAS build
         working-directory: frontend
         env:
@@ -18,4 +101,34 @@
 
           node -e "const fs=require('fs'); const j=JSON.parse(fs.readFileSync('/tmp/eas_build_output.json','utf8')); const id=j.id || (j.result&&j.result.id) || (j.build&&j.build.id) || (j.builds&&j.builds[0]&&j.builds[0].id); if(!id){console.error('No EAS build ID found'); console.error(JSON.stringify(j,null,2)); process.exit(1);} console.log('EAS BUILD ID:',id); fs.writeFileSync('/tmp/eas_build_id',id);"
 
-          echo "EAS build ID saved."
+      - name: Download APK
+        working-directory: frontend
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          BUILD_ID=$(cat /tmp/eas_build_id)
+
+          mkdir -p autismai-artifacts
+
+          # Download artifacts for the build (eas CLI will write files to current dir)
+          eas build:download \
+            --build-id "$BUILD_ID" \
+            --non-interactive
+
+          APK_PATH=$(find . -maxdepth 3 -type f -name '*.apk' | head -n 1 || true)
+
+          if [ -z "$APK_PATH" ]; then
+            echo "ERROR: No APK was downloaded."
+            find . -maxdepth 3 -type f -print
+            exit 1
+          fi
+
+          cp "$APK_PATH" ./autismai.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: autismai-care-android-apk
+          path: frontend/autismai.apk
