@@ -6,28 +6,22 @@ on:
     branches:
       - copilot/autismai-care-foundation
 
-permissions:
-  contents: read
-
 jobs:
   build:
-    name: Build Android APK with EAS
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          node-version: 22
 
       - name: Install dependencies
         working-directory: frontend
-        run: npm ci
+        run: npm install
 
       - name: Install EAS CLI
         run: npm install -g eas-cli
@@ -35,7 +29,12 @@ jobs:
       - name: Check Expo authentication
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: eas whoami
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "EXPO_TOKEN is missing"
+            exit 1
+          fi
+          eas whoami
 
       - name: Build Android APK
         working-directory: frontend
@@ -48,5 +47,49 @@ jobs:
             --non-interactive \
             --wait
 
-      - name: Build complete
-        run: echo "Android APK build completed successfully."
+      - name: Download APK
+        working-directory: frontend
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          eas build:list \
+            --platform android \
+            --limit 1 \
+            --json > build.json
+
+          node -e "
+          const fs = require('fs');
+          const builds = JSON.parse(fs.readFileSync('build.json'));
+          const build = builds[0];
+
+          if (!build) {
+            console.error('No EAS build found');
+            process.exit(1);
+          }
+
+          console.log('Build ID:', build.id);
+          console.log('Status:', build.status);
+          console.log('Artifact:', build.artifacts?.buildUrl || 'NONE');
+
+          if (build.status !== 'FINISHED') {
+            console.error('Build did not finish successfully');
+            process.exit(1);
+          }
+
+          if (!build.artifacts?.buildUrl) {
+            console.error('No APK artifact URL found');
+            process.exit(1);
+          }
+
+          fs.writeFileSync('apk-url.txt', build.artifacts.buildUrl);
+          "
+
+          curl -L "$(cat apk-url.txt)" -o autismai-care.apk
+
+          test -s autismai-care.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: autismai-care-android-apk
+          path: frontend/autismai-care.apk
