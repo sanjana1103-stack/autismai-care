@@ -94,10 +94,63 @@ EOF
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
           set -euo pipefail
+
           echo "Starting EAS build (this will wait until finished)"
-          eas build --platform android --profile preview --non-interactive --wait --json > /tmp/eas_build_output.json
+
+          eas build \
+            --platform android \
+            --profile preview \
+            --non-interactive \
+            --wait \
+            --json > /tmp/eas_build_output.json
+
           echo "EAS build CLI output saved to /tmp/eas_build_output.json"
-          node -e "const fs=require('fs'); const raw=fs.readFileSync('/tmp/eas_build_output.json','utf8'); const j=JSON.parse(raw); const id=j.id || (j.result&&j.result.id) || (j.build&&j.build.id) || (j.builds&&j.builds[0]&&j.builds[0].id); const status=(j.status|| (j.result&&j.result.status) || (j.build&&j.build.status) || (j.builds&&j.builds[0]&&j.builds[0].status) || '').toString().toLowerCase(); if(!id){ console.error('No build id found in EAS output'); process.exit(1);} if(status!=='finished' && status!=='successful' && status!=='finished' && status!=='finished'){ console.error('EAS build did not finish successfully. status='+status); process.exit(1);} console.log(id); fs.writeFileSync('/tmp/eas_build_id', id);"
+
+          node <<'NODE'
+          const fs = require('fs');
+
+          const raw = fs.readFileSync('/tmp/eas_build_output.json', 'utf8');
+
+          let j;
+          try {
+            j = JSON.parse(raw);
+          } catch (err) {
+            console.error('EAS output was not valid JSON');
+            console.error(raw);
+            process.exit(1);
+          }
+
+          const id =
+            j.id ||
+            (j.result && j.result.id) ||
+            (j.build && j.build.id) ||
+            (j.builds && j.builds[0] && j.builds[0].id);
+
+          const status = String(
+            j.status ||
+            (j.result && j.result.status) ||
+            (j.build && j.build.status) ||
+            (j.builds && j.builds[0] && j.builds[0].status) ||
+            ''
+          ).toLowerCase();
+
+          if (!id) {
+            console.error('No build id found in EAS output');
+            process.exit(1);
+          }
+
+          console.log('EAS build ID:', id);
+          console.log('EAS build status:', status);
+
+          if (!['finished', 'successful'].includes(status)) {
+            console.error('EAS build did not finish successfully.');
+            console.error('Status:', status);
+            process.exit(1);
+          }
+
+          fs.writeFileSync('/tmp/eas_build_id', id);
+          NODE
+
           echo "EAS build id saved to /tmp/eas_build_id"
 
       - name: Download APK
