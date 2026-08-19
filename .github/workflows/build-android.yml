@@ -1,0 +1,52 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - copilot/autismai-care-foundation
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Android APK with EAS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Check Expo authentication
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: eas whoami
+
+      - name: Build Android APK
+        working-directory: frontend
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          eas build \
+            --platform android \
+            --profile preview \
+            --non-interactive \
+            --wait
+
+      - name: Build complete
+        run: echo "Android APK build completed successfully."
